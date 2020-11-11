@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import bodyParser from 'body-parser'
-
+import {ejsonBodyParser} from './libs/ejsonBodyParser.mjs'
 // import { EJSON, serialize, deserialize } from 'bson'
 // import compression from 'compression'
 import {apiRouter} from './routes/api/apiRouter.mjs'
@@ -21,6 +21,7 @@ app.use(addUser)
 
 // turn body into a stream of ejson, if a post or put or whatever.
 app.use(bodyParser.json())
+app.use(ejsonBodyParser)
 app.use(bodyParser.urlencoded({ extended: true }))
 
 app.use("/api/", apiRouter)

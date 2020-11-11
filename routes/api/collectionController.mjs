@@ -17,7 +17,8 @@ export const readCollection = async (req, res) => {
   const { db, collection } = req.params
   let query = req.body ?? {}
   const q = (query instanceof Array)?query:[{$match:query}]
-  console.log("database", db, "collection", collection, "query", q)
+  
+  console.log("database", db, "collection", collection, "query", JSON.stringify(q))
   const cursor = await mongo.db(db).collection(collection).aggregate(q).stream()
   streamResults(req,res,cursor)
 }
