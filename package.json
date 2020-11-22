@@ -1,7 +1,7 @@
 {
-  "name": "atlas-node2",
+  "name": "data_service",
   "version": "1.0.0",
-  "description": "new version of atlas-node",
+  "description": "new version of atlas node",
   "main": "server.mjs",
   "scripts": {
     "start": "node server.mjs",

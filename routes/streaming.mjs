@@ -73,10 +73,36 @@ const createJsonStream = (options = {}) => {
   })
 }
 
+const createCsvBsonStream = (options = {}) => {
+  return new Transform({
+    objectMode: true,
+    ...options,
+    transform: function (chunk, encoding, callback) {
+      if (!this.not_first) {
+          this.keys = chunk.keys()
+          this.push(BSON.serialize(this.keys))
+          const values = this.keys.map(k => chunk[k])
+          this.push(BSON.serialize(values))
+          this.not_first = true
+      } else {
+          const values = this.keys.map(k => chunk[k])
+          this.push(BSON.serialize(values))
+      }
+      callback();
+    }
+  })
+}
+
+
 const streamCSV = (res, cursor) => {
   res.setHeader('Content-Type', 'text/csv')
   const csvStream = fastCsv.format({ headers: true }).transform(dvDateFormatter)
   cursor.pipe(csvStream).pipe(res)
+}
+
+const streamCsvBSON = (res, cursor) => {
+  res.setHeader('Content-Type', 'application/csv-bson')
+  cursor.pipe(createCsvBsonStream()).pipe(res)
 }
 
 const streamTSV = (res, cursor) => {
@@ -107,7 +133,8 @@ export const streamResults = (req, res, cursor) => {
     "text/tsv","application/tsv",
     // "text/xml","application/xml", // not yet, hell TODO:protobuf will happen first.
     "application/bson",
-    "text/ejson","application/ejson"
+    "text/ejson","application/ejson",
+    "application/csv-bson"
   ])
   console.log("accept", accept)
   switch (accept) {
@@ -122,6 +149,8 @@ export const streamResults = (req, res, cursor) => {
       streamTSV(res, cursor) ; break
     case "application/bson": // no text version, since it is a binary protocol
       streamBSON(res, cursor) ; break
+    case "application/csv-bson": // no text version, since it is a binary protocol
+    streamCsvBSON(res, cursor) ; break
     case "text/ejson": 
     case "application/ejson": 
       streamEJSON(res, cursor) ; break
