@@ -1,18 +1,5 @@
 import {streamResults,streamObject} from '../streaming.mjs'
-import {Readable} from 'stream'
-import {mongo} from '../../libs/databases.mjs'
-import {setUp,allKnownChildren} from './admin.mjs'
-
-const all_parents_query = (node_id) => ({
-  $graphLookup: {
-      from: "security",
-      startWith: [node_id],
-      connectFromField: "parents",
-      connectToField: "_id",
-      as: "path",
-      maxDepth: 60
-  }
-})
+import {setUp,allKnownChildren,addParent,removeAdmin} from './admin.mjs'
 
 export const setup = async (req, res, next) => {
   streamResults(req, res, await setUp(req.dbUser))  
@@ -30,6 +17,15 @@ export const whoAmIDB = async (req, res, next) => {
   streamObject(req,res,req.dbUser)
 }
 
+export const _addParent = async (req, res, next) => {
+  const {node,parent} = req.params
+  streamObject(req, res, await addParent(req.dbUser, node, parent))
+}
+
+export const _removeAdmin = async (req, res, next) => {
+  const {node,admin} = req.params
+  streamObject(req, res, await removeAdmin(req.dbUser, node, admin))
+}
 
 
 // export const canAdmin = async() => {

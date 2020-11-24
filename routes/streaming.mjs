@@ -93,7 +93,6 @@ const createCsvBsonStream = (options = {}) => {
   })
 }
 
-
 const streamCSV = (res, cursor) => {
   res.setHeader('Content-Type', 'text/csv')
   const csvStream = fastCsv.format({ headers: true }).transform(dvDateFormatter)
