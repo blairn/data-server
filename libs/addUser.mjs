@@ -3,12 +3,12 @@ import fetch from 'node-fetch'
 
 // TODO: can give dupes under obsure conditions
 const resolveTag = async (nickname) => {
-  let tag = '@' + nickname.replace(/\s+/g,"_")
-  let tags = await mongo.db("control").collection("security").count({tag})
-  if (tags == 0) {
-    return tag
+  let _id = '@' + nickname.replace(/\s+/g,"_")
+  let _ids = await mongo.db("control").collection("security").count({_id})
+  if (_ids == 0) {
+    return _id
   } else {
-    return tag+tags
+    return _id+ '_' +_ids
   }
 }
 
