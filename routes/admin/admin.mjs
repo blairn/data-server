@@ -47,23 +47,20 @@ export const getAllParents = node_ids => mongo.db('control').collection("securit
 
 export const getAllChildren = node_ids => mongo.db('control').collection("security").aggregate(all_children_query(toArray(node_ids)))
 
+export const getNode = _id => mongo.db('control').collection("security").findOne({_id})
+
 export const canAdmin = async(user, node_id, parents_only = false) => {
-  console.log("can the user ", user._id, "admin", node_id)
   if (!parents_only && user.admins.includes(node_id)) {
-    // console.log("looks like the user can do this directly")
     return true
   }
   const parents = await getAllParents([node_id]).toArray()
-  // console.log("The parents for ", node_id, "are" , parents)
   const can = parents.some(parent => user.admins.includes(parent._id))
-  // console.log("looks like the user can indirectly? ", can)
   return can
-
 }
 
 export const allKnownChildren = async (user) => await getAllChildren(user.admins)
 
-export const addTagToNode = async (user, tag, node_id) => {
+export const addTagToNode = async (user, tag, node_id, org=false) => {
   const security = mongo.db('control').collection("security")
   if (!await canAdmin(user, node_id)) {
     console.log("can't do this *************")
@@ -82,6 +79,7 @@ export const addTagToNode = async (user, tag, node_id) => {
     parents:[node_id],
     adminedBy:[user._id],
     children:[],
+    org,
     restrictions:{}
   }
   await security.insertOne(new_tag)
@@ -175,7 +173,7 @@ const handleKeyCollision = (o1,o2) => {
   }
 }
 
-const _matchFor = async (node,db,collection,permission,all_parents) => {
+const _matchFor = async (node, db, collection, permission, all_parents) => {
   let _permission = node?.restrictions?.[db]?.[collection]?.[permission]
   if (_permission) {
     _permission = JSON.parse(_permission)
@@ -206,17 +204,49 @@ export const matchFor = async (node,db,collection,permission) => {
   return await _matchFor(node,db,collection,permission, parents)
 }
 
-
-const setRestriction = async (user, node, db, collection, permission, restriction) => {
-  const security = mongo.db('control').collection("security")
-  const parents = await getAllParents(node).toArray()
-
+const couldEdit = async (user, node_id, db, collection, permission, parents) => {
+  const node = getNode(node_id)
   const err_no_path = !_matchFor(node,db,collection,permission, parents)
   if (err_no_path) {
     throw "there is no path to collection from here, so, you can't edit rights for that path"
   }
+  if (node.org) {
+    throw "you can't edit restrictions on an org node. If an org node HAS restrictions, something has gone VERY wrong"
+  }
+  return await Promise.all(parents.map(parent => canAdmin(user, parent._id).then(x => x && _matchFor(parent,db,collection,permission, parents))))  
+}
 
-  const can = await Promise.all(parents.map(parent => canAdmin(user, parent._id).then(x => x && _matchFor(parent,db,collection,permission, parents))))
+export const couldEditPermissionsFor = async (user, node_id, permission) => {
+  const node = getNode(node_id)
+  const parents = await getAllParents(node_id).toArray()
+  console.log("parents are ", parents)
+  return await Promise.all(
+    parents
+      .filter(parent => parent.type == 'collection')
+      .map(async collection_node => ({
+        db:collection_node.db,
+        collection:collection_node.collection,
+        can_edit: (await couldEdit(user, node_id, collection_node.db, collection_node.collection, permission, parents)).some(x=>x)
+      }))
+  )
+}
+
+export const setRestriction = async (user, node_id, db, collection, permission, restriction) => {
+  const node = getNode(node_id)
+  const security = mongo.db('control').collection("security")
+  const parents = await getAllParents(node).toArray()
+
+  const err_no_path = !_matchFor(node,db,collection,permission, parents)
+
+  if (err_no_path) {
+    throw "there is no path to collection from here, so, you can't edit rights for that path"
+  }
+
+  if (node.org) {
+    throw "you can't edit restrictions on an org node. If an org node HAS restrictions, something has gone VERY wrong"
+  }
+
+  const can = await Promise.all(parents.map(parent => canAdmin(user, parent._id).then(x => x && _matchFor(parent,db,collection,permission, parents))))  
   const err_no_perm = !can.some(x=>x)
 
   // const err_no_perm = parents.some(parent => await canAdmin(user, parent._id) && _matchFor(parent,db,collection,permission, parents))
@@ -226,8 +256,8 @@ const setRestriction = async (user, node, db, collection, permission, restrictio
 
   const path = `restrictions.${db}.${collection}`
 
-  const update = {$set: {
-    [path]: {
+  const update = { $set:{
+    [path]:{
       [permission]:JSON.stringify(restriction)
     }
   }}
@@ -257,13 +287,14 @@ const update = (node) => mongo.db("control").collection("security").findOne({_id
 export const setUp = async (user) => {
   console.log("clear the stage")
   await mongo.db("control").collection("security").remove({})
-
+  await mongo.db("control").collection("security").insertOne(user)
+  
   console.log("ACT I - Taylor wants to get shit done")
   console.log("let us welcome our cast")
   console.log()
 
   console.log("creating user blair, he is the hourly admin")
-  let blair = await createUser("blair") // person who looks after hourly
+  let blair = user // person who looks after hourly
 
   console.log("creating user samantha, she is the monthly admin")
   let samantha = await createUser("samantha") // person who looks after monthly
@@ -454,6 +485,6 @@ cordy = await update(cordy)
 console.log("and cordy can see both hourly", JSON.stringify(await matchFor(cordy,"test","hourly","read")))
 console.log("and monthly", JSON.stringify(await matchFor(cordy,"test","monthly","read")))
 
-  return await matchFor(cordy,"#wellington",'test','hourly_bt_rto','read')
+  return await matchFor(cordy,"test","monthly","read")
 }
 

@@ -1,8 +1,8 @@
 import {streamResults,streamObject} from '../streaming.mjs'
-import {setUp,allKnownChildren,addParent,removeAdmin} from './admin.mjs'
+import {getAllParents,getAllChildren,canAdmin,allKnownChildren,addTagToNode,addCollection,addParent,removeParent,addAdmin,removeAdmin,matchFor,setRestriction,setUp} from './admin.mjs'
 
 export const setup = async (req, res, next) => {
-  streamResults(req, res, await setUp(req.dbUser))  
+  streamObject(req, res, await setUp(req.dbUser))
 }
 
 export const _allKnownChildren = async (req, res, next) => {
@@ -17,15 +17,70 @@ export const whoAmIDB = async (req, res, next) => {
   streamObject(req,res,req.dbUser)
 }
 
+export const _getAllParents = async (req, res, next) => {
+  const {node} = req.params
+  streamResults(req, res, await getAllParents(req.dbUser, node))
+}
+
+export const _getAllChildren = async (req, res, next) => {
+  const {node} = req.params
+  streamObject(req, res, await getAllChildren(req.dbUser, node))
+}
+
+export const _allKnownNodes = async (req, res, next) => {
+  streamResults(req, res, await allKnownChildren(req.dbUser))
+}
+
+export const _canAdmin = async (req, res, next) => {
+  const {node} = req.params
+  streamObject(req, res, {result: await canAdmin(req.dbUser, node)})
+}
+
+export const _addTagToNode = async (req, res, next) => {
+  const {tag, node} = req.params
+  streamObject(req, res, await addTagToNode(req.dbUser, tag, node))
+}
+
+export const _addCollection = async (req, res, next) => {
+  const {db,collection} = req.params
+  streamObject(req, res, await addCollection(req.dbUser, node))
+}
+
 export const _addParent = async (req, res, next) => {
-  const {node,parent} = req.params
-  streamObject(req, res, await addParent(req.dbUser, node, parent))
+  const {node} = req.params
+  streamObject(req, res, await addParent(req.dbUser, node))
+}
+
+export const _removeParent = async (req, res, next) => {
+  const {node} = req.params
+  streamObject(req, res, await removeParent(req.dbUser, node))
+}
+
+export const _addAdmin = async (req, res, next) => {
+  const {node} = req.params
+  streamObject(req, res, await addAdmin(req.dbUser, node))
 }
 
 export const _removeAdmin = async (req, res, next) => {
-  const {node,admin} = req.params
-  streamObject(req, res, await removeAdmin(req.dbUser, node, admin))
+  const {node} = req.params
+  streamObject(req, res, await removeAdmin(req.dbUser, node))
 }
+
+export const _matchFor = async (req, res, next) => {
+  const {node} = req.params
+  streamObject(req, res, await matchFor(req.dbUser, node))
+}
+
+export const _setRestriction = async (req, res, next) => {
+  const {node} = req.params
+  streamObject(req, res, await setRestriction(req.dbUser, node))
+}
+
+export const _setUp = async (req, res, next) => {
+  const {node} = req.params
+  streamObject(req, res, await setUp(req.dbUser, node))
+}
+
 
 
 // export const canAdmin = async() => {

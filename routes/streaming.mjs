@@ -8,7 +8,8 @@ const {EJSON} = BSON;
 const dvDateFormatter = (doc) => {
   for (let i of Object.keys(doc)) {
     if (doc[i] instanceof Date) {
-      doc[i] = datefns.format(doc[i], "yyyy-MM-dd'T'HH:mm:ss'Z'") // note, this is a breaking change.
+      doc[i] = doc[i].toISOString()
+//      doc[i] = datefns.format(doc[i], "yyyy-MM-dd'T'HH:mm:ss'Z'") // note, this is a breaking change.
     }
   }
   return doc
