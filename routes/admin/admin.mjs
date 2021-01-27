@@ -123,7 +123,6 @@ export const addCollection = async (user, db, collection) => {
 export const addParent = async (user, node_id, parent_id) => {
   const security = mongo.db('control').collection("security")
   if (!await canAdmin(user,parent_id)) {
-    console.log("can't do this *************")
     throw "ಠ_ಠ, you can't add children to a node you don't admin"
   }
   await security.updateOne({_id:parent_id}, {$addToSet:{children:node_id}})
@@ -134,7 +133,6 @@ export const addParent = async (user, node_id, parent_id) => {
 export const removeParent = async (user, node_id, parent_id) => {
   const security = mongo.db('control').collection("security")
   if (!await canAdmin(user,parent_id)) {
-    console.log("can't do this *************")
     throw "ಠ_ಠ, you can't remove children from node you don't admin"
   }
   await security.updateOne({_id:parent_id}, {$pull:{children:node_id}})
@@ -146,7 +144,6 @@ export const addAdmin = async (user, node, admin) => {
   const security = mongo.db('control').collection("security")
   // TODO can't remove last assigner - must make find all assignees.
   if (!await canAdmin(user,node)) {
-    console.log("can't do this *************")
     throw "ಠ_ಠ, you can't add admins to a place you don't admin"
   }
   await security.updateOne({_id:admin}, {$addToSet:{admins:node}})
@@ -157,7 +154,6 @@ export const removeAdmin = async (user, node, admin) => {
   const security = mongo.db('control').collection("security")
   // TODO can't remove last assigner - must make find all assignees.
   if (!await canAdmin(user,node)) {
-    console.log("can't do this *************")
     throw "ಠ_ಠ, you can't boot admins from a place you don't admin"
   }
   await security.updateOne({_id:admin}, {$pull:{admins:node}})
@@ -188,8 +184,13 @@ const _matchFor = async (node, db, collection, permission, all_parents) => {
   const node_parents = all_parents.filter(x=>x.children.includes(node._id))
 
   const unfiltered_matches = await Promise.all(node_parents.map(parent => _matchFor(parent,db,collection,permission,all_parents)))
-  const matches = unfiltered_matches.filter(x => !!x)
+  let matches = unfiltered_matches.filter(x => !!x)
   if (matches.length == 0) return undefined // there is no path to collection, bail out now
+
+  // simplification stage.
+  if (matches.some(x => Object.keys(x).length == 0)) {
+    matches = [{}] // if there is a path which gives you everything, then, you get everything.
+  }
 
   const parentMatches = matches.length == 1?matches[0]:{ $or:matches }
   if (_permission == undefined) {
